@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Security
 from sqlalchemy.orm import Session
-from db.database import SessionLocal, engine, get_db
+from db.database import SessionLocal, get_db
 from models.data import Servicio
-from schemas.servicio import Servico, ServicioDB
+from schemas.servicio import ServicioAdd, ServicioDB
 from security.auth import get_current_active_user, get_current_user
 from typing_extensions import Annotated
 from schemas.user import User_InDB
@@ -12,7 +12,7 @@ router = APIRouter()
 
 @router.post("/crear_servicio/", status_code=status.HTTP_201_CREATED)
 async def crear_servicio(current_user: Annotated[User_InDB, Security(get_current_user, scopes=["admin"])],
-					nuevo_servicio: Servicio, db: Session = Depends(get_db)):
+					nuevo_servicio: ServicioAdd, db: Session = Depends(get_db)):
 	try:
 		db_servicio = Servicio(
 			nombre_servicio = nuevo_servicio.nombre_servicio,
@@ -48,7 +48,7 @@ async def eliminar_servicio(current_user: Annotated[User_InDB, Security(get_curr
 
 @router.put("/actualizar_servicio/{id}", status_code=status.HTTP_201_CREATED) 
 async def actualizar_servicio(current_user: Annotated[User_InDB, Security(get_current_user, scopes=["admin"])], 
-				id: str, servicio: Servicio, db: Session = Depends(get_db)):
+				id: str, servicio: ServicioAdd, db: Session = Depends(get_db)):
 	db_servicio = db.query(Servicio).filter(Servicio.id_servicio == id).first()
 	if db_servicio is None:
 		raise HTTPException(status_code=404, detail="El servicio seleccionado no existen en la base de datos")
