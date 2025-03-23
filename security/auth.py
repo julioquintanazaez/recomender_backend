@@ -18,7 +18,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 oauth2_scheme = OAuth2PasswordBearer(
 	tokenUrl="token",
-	scopes={"admin": "Adicionar, modificar información.", "trabajador": "Modificar información.", "cliente": "Consumir información."}
+	scopes={"admin": "Adicionar, modificar información.", "cliente": "Consumir información."}
 )
 
 def verify_password(plain_password, hashed_password):
@@ -95,10 +95,6 @@ async def get_current_user(
 	return user
 	
 async def get_current_active_user(current_user: Annotated[User_InDB, Security(get_current_user, scopes=["admin"])]):  
-	if current_user.deshabilitado:
-		print({"Usuario autenticado" : current_user.deshabilitado})
-		print({"Usuario roles" : current_user.role})
-		raise HTTPException(status_code=400, detail="Usuario deshabilitado")
 	return current_user
 
 

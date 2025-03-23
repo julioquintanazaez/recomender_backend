@@ -6,7 +6,6 @@ from uuid import uuid4
 import core.config as config
 from routers.user import users
 from routers.security import auth
-from routers.servicios import servicio
 from routers.productos import producto
 
 #Create our main app "https://pp-back-end.onrender.com"
@@ -14,7 +13,6 @@ app = FastAPI()
 
 app.include_router(auth.router)  #, prefix="/auth", tags=["auth"]
 app.include_router(users.router, prefix="/usuario", tags=["usuario"])
-app.include_router(servicio.router, prefix="/sercicio", tags=["sercicio"])
 app.include_router(producto.router, prefix="/producto", tags=["producto"])
 
 
@@ -29,7 +27,7 @@ app.add_middleware(
 	allow_origins=config.CORS_ORIGINS,
 	allow_credentials=True,
 	allow_methods=methods,
-	allow_headers=headers,
+	allow_headers=["*"],
 	expose_headers=["*"]
 )
 

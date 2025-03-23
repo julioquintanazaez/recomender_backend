@@ -11,8 +11,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = getenv("ACCESS_TOKEN_EXPIRE_MINUTES")
 
 
 CORS_ORIGINS = [	
-	"http://practicasprofesionales.onrender.com",
-	"https://practicasprofesionales.onrender.com",		
+	"https://recomender-frontend.onrender.com",		
+    "http://recomender-frontend.onrender.com",		
 	"http://localhost",
 	"http://localhost:8080",
 	"https://localhost:8080",

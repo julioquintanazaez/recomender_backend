@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from schemas.token import Token
 from security.auth import create_access_token, authenticate_user, get_current_active_user, get_current_user
 from db.database import get_db
-from schemas.user import User_InDB, User_Record
+from schemas.user import User_InDB
 
 from core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 
@@ -39,7 +39,7 @@ async def get_restricted_user(current_user: Annotated[User_InDB, Depends(get_cur
     return current_user
 	
 @router.get("/get_authenticated_admin_resources")
-async def get_authenticated_admin_resources(current_user: Annotated[User_InDB, Security(get_current_active_user, scopes=["profesor"])]):
+async def get_authenticated_admin_resources(current_user: Annotated[User_InDB, Security(get_current_active_user, scopes=["trabajador"])]):
     return current_user
 	
 @router.get("/get_authenticated_edition_resources")
