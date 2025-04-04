@@ -1,12 +1,16 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Security
+from fastapi import APIRouter, Depends, HTTPException, status, Security, Query
 from sqlalchemy.orm import Session
 from db.database import SessionLocal, engine, get_db
 from models.data import Producto
-from schemas.producto import ProductoBase, ProductoDB, ProductoConsumo
+from schemas.producto import ProductoBase, ProductoDB, ProductoConsumo, ProductoRecomendar
 from schemas.user import User_InDB
 from security.auth import get_current_active_user, get_current_user
 from typing_extensions import Annotated
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
+import pandas as pd
+from engine.recomendador import recomendar_productos 
+from typing import List
+import json
 
 router = APIRouter()
 
@@ -27,13 +31,6 @@ async def crear_producto(current_user: Annotated[User_InDB, Security(get_current
 	except SQLAlchemyError as e: 
 		raise HTTPException(status_code=405, detail="Error inesperado SQLAlchemy creando el objeto Producto")		
 
-
-@router.get("/leer_productos/", status_code=status.HTTP_201_CREATED)  
-async def leer_productos(current_user: Annotated[User_InDB, Security(get_current_user, scopes=["cliente"])],
-					skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):    
-	return db.query(Producto).all()	
-	
-
 @router.delete("/eliminar_producto/{id}", status_code=status.HTTP_201_CREATED) 
 async def eliminar_producto(current_user: Annotated[User_InDB, Security(get_current_user, scopes=["admin"])],
 					id: str, db: Session = Depends(get_db)):
@@ -43,7 +40,6 @@ async def eliminar_producto(current_user: Annotated[User_InDB, Security(get_curr
 	db.delete(db_producto)	
 	db.commit()
 	return {"Result": "Producto eliminado satisfactoriamente"}
-
 
 @router.put("/actualizar_producto/{id}", status_code=status.HTTP_201_CREATED) 
 async def actualizar_producto(current_user: Annotated[User_InDB, Security(get_current_user, scopes=["admin"])], 
@@ -91,12 +87,31 @@ async def actualizar_producto_consumo(current_user: Annotated[User_InDB, Securit
 	db.refresh(db_producto)	
 	return {"Result": "Producto actualizado satisfactoriamente"}	
 
+@router.get("/leer_productos/", status_code=status.HTTP_201_CREATED)  
+async def leer_productos(current_user: Annotated[User_InDB, Security(get_current_user, scopes=["cliente"])],
+					skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):    
+	return db.query(Producto).all()	
+	
 @router.get("/leer_productos_libres/", status_code=status.HTTP_200_OK)  
 async def leer_productos_libres(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):    
 	return db.query(Producto).all()	
 
-@router.get("/leer_productos_recomendados/", status_code=status.HTTP_200_OK)  
-async def leer_productos_recomendados(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):    
-	productos = db.query(Producto).filter(Producto.consumo_producto != 0).all()
-	return productos
-
+@router.post("/leer_productos_recomendados/", 
+			status_code=status.HTTP_200_OK)  
+async def leer_productos_recomendados(nombres: ProductoRecomendar,
+				db: Session = Depends(get_db)):  
+	descrip = []	  
+	productos = db.query(Producto).all()
+	for p in productos:
+		descrip.append((p.nombre_producto, p.desc_producto))
+	df_productos = pd.DataFrame(data=descrip, columns=["nombre_producto","desc_producto"])
+	df_productos = recomendar_productos(df_productos, nombres.nombres_productos, top_n=2)
+	json_productos = df_productos.to_json(orient='records')
+	#print(json_productos)
+	dictres = []
+	for index, row in df_productos.iterrows():
+		dictres.append({
+			"nombre_producto": row.nombre_producto,
+			"desc_producto": row.desc_producto
+		})
+	return dictres

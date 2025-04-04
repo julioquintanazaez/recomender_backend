@@ -16,3 +16,8 @@ class ProductoDB(ProductoBase):
 	
 class ProductoConsumo(BaseModel):
 	consumo_producto : int
+
+class ProductoRecomendar(BaseModel):
+	nombres_productos: List[str]
+
+

@@ -23,3 +23,7 @@ CORS_ORIGINS = [
 	"http://localhost:8000",
 	"https://localhost:8000",
 ]
+
+
+DESCRIPTIONS_FILE: str = "engine/descripcion/descripciones.json"
+STOPWORDS_FILE: str = "engine/stopwords/"
