@@ -20,4 +20,8 @@ class ProductoConsumo(BaseModel):
 class ProductoRecomendar(BaseModel):
 	nombres_productos: List[str]
 
+class DeleteRequest(BaseModel):
+    indices: List[str]
+
+
 

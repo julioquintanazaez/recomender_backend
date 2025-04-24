@@ -1,6 +1,7 @@
 #from db.database import Base
 import datetime
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Float, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Float, String
+from sqlalchemy import LargeBinary, Text, UniqueConstraint
 from sqlalchemy.orm import relationship
 from fastapi_utils.guid_type import GUID, GUID_DEFAULT_SQLITE
 from sqlalchemy.types import TypeDecorator, String
@@ -37,5 +38,11 @@ class Producto(Base):
 	nombre_producto = Column(String(50), unique=True, nullable=False, index=True) 
 	desc_producto = Column(String(250), nullable=False, index=True)
 	consumo_producto = Column(Integer, nullable=True, index=True, default=0)
+	imagen_b64 = Column(LargeBinary, nullable=True)
+
+	def __repr__(self):
+		return f"Producto(id={self.id_producto}, nombre={self.nombre_producto}, descripcion={self.desc_producto})"
+
+
 
 	

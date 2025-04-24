@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Security
 from sqlalchemy.orm import Session
 from db.database import SessionLocal, get_db
 from models.data import User
-from schemas.user import User_Add, User_Base, User_ResetPassword, User_InDB
+from schemas.user import User_Add, User_Base, User_ResetPassword, User_InDB, DeleteRequest
 from security.auth import get_password_hash, get_current_active_user, get_current_user, pwd_context
 from typing_extensions import Annotated
 
@@ -59,3 +59,14 @@ async def actualizar_contrasenna(usuario_actual: Annotated[User_InDB, Security(g
 	return {"Resultado": "Contraseña actualizada satisfactoriamente"}
 
 
+@router.delete("/delete-usuarios/")
+async def delete_items(request: DeleteRequest, db: Session = Depends(get_db)):
+    indices_to_delete = request.indices
+    items_to_delete = db.query(User).filter(
+		User.id.in_(indices_to_delete)).all()
+    if not items_to_delete:
+        raise HTTPException(status_code=404, detail="No items found to delete")
+    for item in items_to_delete:
+        db.delete(item)
+    db.commit()
+    return {"message": "Usuarios eliminados satisfactoriamente"}

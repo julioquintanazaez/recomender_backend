@@ -18,3 +18,6 @@ class User_InDB(User_Add):
 
 class User_ResetPassword(BaseModel):
 	newpassword: str
+
+class DeleteRequest(BaseModel):
+    indices: List[str]

@@ -1,18 +1,65 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Security, Query
+from fastapi.responses import JSONResponse, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi import File, UploadFile, Form
 from sqlalchemy.orm import Session
 from db.database import SessionLocal, engine, get_db
 from models.data import Producto
-from schemas.producto import ProductoBase, ProductoDB, ProductoConsumo, ProductoRecomendar
+from schemas.producto import ProductoBase, ProductoConsumo, ProductoRecomendar, DeleteRequest
 from schemas.user import User_InDB
 from security.auth import get_current_active_user, get_current_user
 from typing_extensions import Annotated
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import pandas as pd
 from engine.recomendador import recomendar_productos 
-from typing import List
-import json
+
+
 
 router = APIRouter()
+
+# Ruta para crear un producto
+@router.post("/crear_producto_temp/", status_code=status.HTTP_201_CREATED)
+async def crear_producto_temp(
+				current_user: Annotated[User_InDB, Security(get_current_user, scopes=["admin"])],
+				nombre_producto: str = Form(...), 
+				desc_producto: str = Form(...), 
+				imagen: UploadFile = File(...),
+				db: Session = Depends(get_db)):
+	
+    producto = Producto(
+		nombre_producto=nombre_producto, 
+		desc_producto=desc_producto, 
+		imagen_b64=await imagen.read())
+	
+    db.add(producto)
+    db.commit()
+    db.refresh(producto)
+    return {"mensaje": "Producto creado con éxito", "id": producto.id_producto}
+
+# Ruta para actualizar un producto
+@router.put("/actualizar_producto_temp/{id}", status_code=status.HTTP_201_CREATED)
+async def actualizar_producto_temp(
+				current_user: Annotated[User_InDB, Security(get_current_user, scopes=["admin"])],
+				id: str, 
+				nombre_producto: str = Form(None), 
+				desc_producto: str = Form(None), 
+				imagen: UploadFile = File(None),
+				db: Session = Depends(get_db)):
+	
+	print(nombre_producto)
+	producto = db.query(Producto).filter(Producto.id_producto == id).first()
+	if producto:
+		if nombre_producto:
+			producto.nombre_producto = nombre_producto
+		if desc_producto:
+			producto.desc_producto = desc_producto
+		if imagen:
+			producto.imagen_b64 = await imagen.read()
+		db.commit()
+		db.refresh(producto)
+		return {"mensaje": "Producto actualizado con éxito"}
+	return {"mensaje": "Producto no encontrado"}
+
 
 @router.post("/crear_producto/", status_code=status.HTTP_201_CREATED)
 async def crear_producto(current_user: Annotated[User_InDB, Security(get_current_user, scopes=["admin"])],
@@ -90,24 +137,24 @@ async def actualizar_producto_consumo(current_user: Annotated[User_InDB, Securit
 @router.get("/leer_productos/", status_code=status.HTTP_201_CREATED)  
 async def leer_productos(current_user: Annotated[User_InDB, Security(get_current_user, scopes=["cliente"])],
 					skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):    
-	return db.query(Producto).all()	
+	return [{"id_producto": p.id_producto, "nombre_producto": p.nombre_producto, "desc_producto": p.desc_producto} 
+            for p in db.query(Producto).all()]
 	
 @router.get("/leer_productos_libres/", status_code=status.HTTP_200_OK)  
 async def leer_productos_libres(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):    
-	return db.query(Producto).all()	
+	return [{"id_producto": p.id_producto, "nombre_producto": p.nombre_producto, "desc_producto": p.desc_producto} 
+            for p in db.query(Producto).all()]
 
-@router.post("/leer_productos_recomendados/", 
-			status_code=status.HTTP_200_OK)  
+@router.post("/leer_productos_recomendados/", status_code=status.HTTP_200_OK)  
 async def leer_productos_recomendados(nombres: ProductoRecomendar,
 				db: Session = Depends(get_db)):  
 	descrip = []	  
 	productos = db.query(Producto).all()
 	for p in productos:
+		print((p.nombre_producto, p.desc_producto))
 		descrip.append((p.nombre_producto, p.desc_producto))
 	df_productos = pd.DataFrame(data=descrip, columns=["nombre_producto","desc_producto"])
 	df_productos = recomendar_productos(df_productos, nombres.nombres_productos, top_n=2)
-	json_productos = df_productos.to_json(orient='records')
-	#print(json_productos)
 	dictres = []
 	for index, row in df_productos.iterrows():
 		dictres.append({
@@ -115,3 +162,24 @@ async def leer_productos_recomendados(nombres: ProductoRecomendar,
 			"desc_producto": row.desc_producto
 		})
 	return dictres
+
+@router.delete("/delete-productos/")
+async def delete_items(request: DeleteRequest, db: Session = Depends(get_db)):
+    indices_to_delete = request.indices
+    items_to_delete = db.query(Producto).filter(
+		Producto.id_producto.in_(indices_to_delete)).all()
+    if not items_to_delete:
+        raise HTTPException(status_code=404, detail="No items found to delete")
+    for item in items_to_delete:
+        db.delete(item)
+    db.commit()
+    return {"message": "Productos eliminados satisfactoriamente"}
+
+# Ruta para obtener la imagen de un producto por ID
+@router.get("/imagen/{id}")
+async def obtener_imagen(id: str):
+    db = SessionLocal()
+    producto = db.query(Producto).filter(Producto.id_producto == id).first()
+    if producto and producto.imagen_b64:
+        return Response(content=producto.imagen_b64, media_type="image/jpeg")
+    return {"mensaje": "Imagen no encontrada"}
